@@ -1,25 +1,22 @@
-"""Tests for which models the LLM preflight checks against Ollama: the front
-model, plus the analyst whenever the architecture runs one."""
+"""Tests for which models the LLM preflight checks against Ollama: the
+architecture's conversation model(s)."""
 
 import bot
 
 
-def test_cascade_local_checks_front_only(monkeypatch):
-    monkeypatch.delenv("LOFI_RAG_LLM_MODEL", raising=False)
+def test_models_to_check_per_architecture(monkeypatch):
+    monkeypatch.setenv("LOFI_LLM_MODEL", "qwen2.5:7b")
+    monkeypatch.setenv("LOFI_RAG_LLM_MODEL", "qwen3.8:27b")
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    assert bot._ollama_models_to_check() == ["qwen2.5:7b"]
     monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade")
-    monkeypatch.setenv("LOFI_LLM_MODEL", "front:7b")
-    assert bot._ollama_models_to_check() == ["front:7b"]
-
-
-def test_split_adds_distinct_analyst(monkeypatch):
+    assert bot._ollama_models_to_check() == ["qwen3.8:27b"]
     monkeypatch.setenv("LOFI_ARCHITECTURE", "llmwithbackend")
-    monkeypatch.setenv("LOFI_LLM_MODEL", "front:7b")
-    monkeypatch.setenv("LOFI_RAG_LLM_MODEL", "analyst:4b")
-    assert bot._ollama_models_to_check() == ["front:7b", "analyst:4b"]
+    assert bot._ollama_models_to_check() == ["qwen2.5:7b", "qwen3.8:27b"]
 
 
 def test_split_same_model_checked_once(monkeypatch):
-    monkeypatch.setenv("LOFI_RAG_LLM_MODEL", "front:7b")
     monkeypatch.setenv("LOFI_ARCHITECTURE", "llmwithbackend")
     monkeypatch.setenv("LOFI_LLM_MODEL", "front:7b")
+    monkeypatch.setenv("LOFI_RAG_LLM_MODEL", "front:7b")
     assert bot._ollama_models_to_check() == ["front:7b"]

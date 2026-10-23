@@ -211,3 +211,27 @@ def test_model_entries_add_analyst_row_for_split(monkeypatch):
     entries = print_models.model_entries()
     by_role = {e["role"]: e for e in entries}
     assert by_role["ANALYST"]["model"].startswith(config.rag_llm_model())
+
+
+def test_model_entries_llm_row_uses_cascade_model(monkeypatch):
+    from scripts import print_models
+
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade")
+    monkeypatch.setattr(print_models, "_ollama_file", lambda tag: None)
+    entries = print_models.model_entries()
+    by_role = {e["role"]: e for e in entries}
+    assert by_role["LLM"]["model"].startswith(config.rag_llm_model())
+    assert "ANALYST" not in by_role
+
+
+def test_model_entries_simple_chat_omits_embed_and_analyst(monkeypatch):
+    from scripts import print_models
+
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    monkeypatch.setattr(print_models, "_ollama_file", lambda tag: None)
+    entries = print_models.model_entries()
+    roles = [e["role"] for e in entries]
+    assert "EMBED" not in roles
+    assert "ANALYST" not in roles
+    by_role = {e["role"]: e for e in entries}
+    assert by_role["LLM"]["model"].startswith(config.llm_model())

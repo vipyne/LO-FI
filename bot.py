@@ -106,13 +106,17 @@ def _configure_logging() -> None:
 
 
 def _ollama_models_to_check() -> list[str]:
-    """Models that must be pulled in the local Ollama: the front model, plus
-    analyst when the architecture runs one."""
+    """Models that must be pulled in the local Ollama: the architecture's
+    conversation model(s)."""
+    arch = config.architecture()
+    if arch == "cascade":
+        return [config.rag_llm_model()]
+    if arch == "cascade-simple-chat":
+        return [config.llm_model()]
     models: list[str] = [config.llm_model()]
-    if config.architecture() == "llmwithbackend":
-        model = config.rag_llm_model()
-        if model not in models:
-            models.append(model)
+    model = config.rag_llm_model()
+    if model not in models:
+        models.append(model)
     return models
 
 

@@ -378,10 +378,12 @@ def _entry(role: str, model: str, found: Path | None) -> dict:
 
 
 def _llm_entry() -> dict:
+    # cascade holds the four retrieval tools on the RAG model directly.
+    model = config.rag_llm_model() if config.architecture() == "cascade" else config.llm_model()
     return _entry(
         "LLM",
-        f"{config.llm_model()} (Ollama @ {config.ollama_base_url()})",
-        _ollama_file(config.llm_model()),
+        f"{model} (Ollama @ {config.ollama_base_url()})",
+        _ollama_file(model),
     )
 
 
@@ -403,12 +405,13 @@ def model_entries(mode: str = "offline") -> list[dict]:
     if mode == "online":
         return online_model_entries()
     ollama = f"(Ollama @ {config.ollama_base_url()})"
+    arch = config.architecture()
     entries = [
         _entry("STT", _stt_line(), _stt_file()),
         _llm_entry(),
     ]
     # Split runs the records analyst as its own (always local) model.
-    if config.architecture() == "llmwithbackend":
+    if arch == "llmwithbackend":
         entries.append(
             _entry(
                 "ANALYST",
@@ -416,16 +419,16 @@ def model_entries(mode: str = "offline") -> list[dict]:
                 _ollama_file(config.rag_llm_model()),
             )
         )
-    entries.extend(
-        [
-            _entry("TTS", _tts_line(), _tts_file()),
+    entries.append(_entry("TTS", _tts_line(), _tts_file()))
+    # simple-chat never builds a records index, so it has no embed model.
+    if arch != "cascade-simple-chat":
+        entries.append(
             _entry(
                 "EMBED",
                 f"{config.embed_model()} {ollama}",
                 _ollama_file(config.embed_model()),
-            ),
-        ]
-    )
+            )
+        )
     return entries
 
 
