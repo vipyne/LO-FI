@@ -19,8 +19,11 @@ That version is an ideal language learning partner. Read on to learn more.
   pair (smaller tiers exist — see [Choosing models](#a-choosing-models-for-your-hardware)).
 - **Python 3.12** (pinned; 3.14 is too new for the ML wheels).
 - **[uv](https://docs.astral.sh/uv/)** — Python package manager.
-- **[Ollama](https://ollama.com/)** — serves the local LLM.
+- **[Ollama](https://ollama.com/) ≥ 0.40.8** — serves the local LLM.
 - **Any web browser** — audio I/O and echo cancellation.
+
+> [!NOTE]
+> Re: Ollama: Older servers ignore `reasoning_effort` on `/v1` (reasoning-model `<think>` text then reaches TTS). Any install works — the menu-bar Ollama.app, brew, or the install script — but separate installs update independently, so check the server itself with `curl -s http://localhost:11434/api/version`: the one answering on 11434 is the one that counts.
 
 ---
 
@@ -54,9 +57,24 @@ Open http://localhost:7860 in any browser, click Connect & ask *"what's the
 passphrase for the tax vault?"*. Neat, huh? Add more useful documents and
 run `./lofi.sh stop && ./lofi.sh index-rag`.
 
+### Help
 For more configuration and options:
 ```bash
 ./lofi.sh help
+```
+
+### Bot modes cheat sheet:
+- Offline
+```bash
+./lofi.sh --offline-only --cascade-simple-chat # simple STT,LLM,TTS bot; no tool calls
+./lofi.sh --offline-only --cascade             # STT,LLM,TTS bot; tool calls available
+./lofi.sh --offline-only --llmwithbackend      # front LLM for chat + back/analyst LLM for tool calls
+```
+
+- Online
+```bash
+./lofi.sh --online-only --cascade             # STT,LLM,TTS bot; tool calls available
+./lofi.sh --online-only --llmwithbackend      # front LLM for chat + back/analyst LLM for tool calls
 ```
 
 ## Setup
