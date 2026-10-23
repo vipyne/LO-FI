@@ -202,6 +202,24 @@ def build_llm(temperature: float | None = None):
     )
 
 
+def build_cascade_llm():
+    """The offline cascade's LLM: holds the four records tools directly on
+    LOFI_RAG_LLM_MODEL (no split front/analyst).
+
+    Reasoning-off for the same reason as ``build_llm``: qwen3 ``<think>``
+    must not reach TTS.
+    """
+    from pipecat.services.ollama.llm import OLLamaLLMService
+
+    return OLLamaLLMService(
+        settings=OLLamaLLMService.Settings(
+            model=config.rag_llm_model(),
+            extra={"extra_body": {"reasoning_effort": "none"}},
+        ),
+        base_url=config.ollama_base_url(),
+    )
+
+
 def build_backend_llm():
     """The records backend's LLM (LOFI_RAG_LLM_MODEL, thinking allowed).
 
