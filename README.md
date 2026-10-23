@@ -168,7 +168,7 @@ tail -f .lofi/logs/bot-*
 
 The question: *what can this computer actually run?* The process:
 
-1. **Profile the machine.** `./configure.sh` reads your RAM/CPU/GPU and prints
+1. **Profile the machine.** `./lofi.sh configure` reads your RAM/CPU/GPU and prints
    STT/LLM/TTS combos sized to it (`-v` for the full report with per-slot
    model catalogs ranked by fit, `-i` to pick interactively). Everything
    resident at once has to fit — front model + analyst + embedder + STT + TTS.
@@ -189,7 +189,7 @@ The question: *what can this computer actually run?* The process:
      belong).
 
    The filters shape suggestions, not availability: any model you set
-   explicitly is honored, and `./configure.sh --catalogs` (or
+   explicitly is honored, and `./lofi.sh configure --catalogs` (or
    `./lofi.sh status -v`) lists everything unfiltered.
 
 2. **Budget the RAM.** Ollama's default Q4 quantization costs roughly
@@ -280,7 +280,7 @@ uv sync --extra local-audio       # the extra adds PyAudio (needs PortAudio)
 
 > [!NOTE]
 > `uv sync` uninstalls any extra you don't pass, so keep listing the ones you
-> want: `uv sync --extra local-audio --extra piper`. (`./configure.sh -i`
+> want: `uv sync --extra local-audio --extra piper`. (`./lofi.sh configure -i`
 > preserves whatever is already installed.)
 
 ### C. See [above](#3-run)
@@ -534,7 +534,7 @@ Two routes:
 
 - **Native (simplest):** PowerShell + uv, no Linux layer, full machine RAM.
 - **WSL2:** the bot runs in Linux, your browser/mic/speakers stay on Windows.
-  You get the bash tooling (`./lofi.sh`, `./configure.sh`), at the cost of
+  You get the bash tooling (`./lofi.sh`), at the cost of
   installing WSL and a default RAM cap.
 
 Either way, **expect speech-to-text to be the slow part**: without Apple
@@ -601,7 +601,7 @@ new-tab button), then run the bare-Linux setup block from
 #### 3. Pick models that fit your RAM
 
 WSL shares the machine's RAM, and every resident model has to fit —
-`./configure.sh` profiles the machine and ranks model combos that fit (`-i`
+`./lofi.sh configure` profiles the machine and ranks model combos that fit (`-i`
 to pick interactively). The default pair (qwen2.5:7b front + qwen3:8b
 analyst) wants **16 GB+**. On a ~8 GB machine, drop to a single small model
 in `cascade` mode before prefetching:
@@ -644,7 +644,7 @@ Then click **Connect**, allow the mic, talk.
 ### Troubleshooting
 
 - **WSL only sees about half your RAM** — that's its default cap, and it's
-  what `./configure.sh` and Ollama see. A 16 GB machine shows ~8 GB inside
+  what `./lofi.sh configure` and Ollama see. A 16 GB machine shows ~8 GB inside
   Ubuntu. Raise it: edit `%UserProfile%\.wslconfig` on the Windows side
   (`vi /mnt/c/Users/<you>/.wslconfig` from bash works) to
 
@@ -676,7 +676,7 @@ Both bots share one brain (`pipeline.py` — the same STT → VAD → LLM → TT
 pipeline, built offline or online from the session's mode); they differ only
 in the transport. The STT/LLM/TTS services are built in `services.py`,
 dispatched on `LOFI_STT_ENGINE` / `LOFI_TTS_ENGINE` — so swapping engines
-(via `.lofirc` or `./configure.sh -i`) never touches a bot file you may have
+(via `.lofirc` or `./lofi.sh configure -i`) never touches a bot file you may have
 customized.
 
 ```
