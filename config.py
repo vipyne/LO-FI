@@ -45,6 +45,7 @@ from tunables import (
     DEFAULT_TTS_ENGINE,
     LOFI_GREETING,
     LOFI_ONLINE_GREETING,
+    LOFI_SIMPLE_CHAT_GREETING,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -479,8 +480,13 @@ def online_only() -> bool:
 
     Skips the local LLM/STT/RAG preflights, so the bot starts with Ollama
     down; a connect asking for offline is refused. When LOFI_OFFLINE_ONLY is
-    also set, offline-only wins and this returns False.
+    also set, offline-only wins and this returns False. The
+    ``cascade-simple-chat`` architecture is local-only, so it wins too — a
+    workshop `.lofirc` carrying LOFI_ONLINE_ONLY=1 would otherwise refuse
+    every session the bot can actually serve.
     """
+    if architecture() == "cascade-simple-chat":
+        return False
     return _truthy("LOFI_ONLINE_ONLY") and not offline_only()
 
 
@@ -494,9 +500,24 @@ def offline_only() -> bool:
     return _truthy("LOFI_OFFLINE_ONLY")
 
 
+_simple_chat_override_warned = False
+
+
 def serve_mode() -> str:
     """Which sessions this process serves: ``offline-only``, ``online-only``,
     or ``both`` (the default when neither LOFI_*_ONLY var is set)."""
+    global _simple_chat_override_warned
+    if (
+        _truthy("LOFI_ONLINE_ONLY")
+        and not offline_only()
+        and architecture() == "cascade-simple-chat"
+        and not _simple_chat_override_warned
+    ):
+        _simple_chat_override_warned = True
+        print(
+            "lofi: simple-chat is offline — overriding LOFI_ONLINE_ONLY",
+            file=sys.stderr,
+        )
     if offline_only():
         return "offline-only"
     if online_only():
@@ -539,11 +560,14 @@ def architecture() -> str:
     that runs the four retrieval tools.
     ``cascade``: one model holds the four retrieval tools directly — the
     simple, stable fallback.
+    ``cascade-simple-chat``: one model, chat only, no tools and no records
+    access — the smallest thing that talks, for machines that cannot run the
+    retrieval stack.
     """
     value = _get("LOFI_ARCHITECTURE", "llmwithbackend").strip().lower()
-    if value not in ("cascade", "llmwithbackend"):
+    if value not in ("cascade", "cascade-simple-chat", "llmwithbackend"):
         raise SystemExit(
-            f"\n✖ Unknown LOFI_ARCHITECTURE '{value}' — valid: llmwithbackend (default), cascade\n"
+            f"\n✖ Unknown LOFI_ARCHITECTURE '{value}' — valid: llmwithbackend (default), cascade, cascade-simple-chat\n"
         )
     return value
 
@@ -632,6 +656,22 @@ def greeting() -> str:
 def online_greeting() -> str:
     """Opening line an online session speaks (LOFI_ONLINE_GREETING)."""
     return _get("LOFI_ONLINE_GREETING", LOFI_ONLINE_GREETING)
+
+
+def simple_chat_greeting() -> str:
+    """Opening line a simple-chat session speaks (LOFI_SIMPLE_CHAT_GREETING)."""
+    return _get("LOFI_SIMPLE_CHAT_GREETING", LOFI_SIMPLE_CHAT_GREETING)
+
+
+def offline_greeting() -> str:
+    """Opening line an offline session speaks, per architecture.
+
+    Simple-chat has no records access, so its own line wins over a
+    LOFI_GREETING that promises finances.
+    """
+    if architecture() == "cascade-simple-chat":
+        return simple_chat_greeting()
+    return greeting()
 
 
 def greeting_delay_secs() -> float:

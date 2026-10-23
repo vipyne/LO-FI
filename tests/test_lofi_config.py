@@ -86,3 +86,21 @@ def test_model_entries_missing_flag(monkeypatch, tmp_path):
     assert entries["TTS"]["missing"] is False
     # Cloud rows have no local weights to miss.
     assert all(e["missing"] is False for e in print_models.model_entries("online"))
+
+
+def test_architecture_accepts_simple_chat(monkeypatch):
+    """The third offline architecture is a valid LOFI_ARCHITECTURE value."""
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    assert config.architecture() == "cascade-simple-chat"
+
+
+def test_simple_chat_overrides_online_only(monkeypatch):
+    """Simple-chat is offline-only by nature, so it wins over LOFI_ONLINE_ONLY.
+
+    A workshop machine's `.lofirc` can carry LOFI_ONLINE_ONLY=1; with
+    simple-chat selected the process must still serve offline sessions.
+    """
+    monkeypatch.setenv("LOFI_ONLINE_ONLY", "1")
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    assert config.online_only() is False
+    assert config.serve_mode() != "online-only"

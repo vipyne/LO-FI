@@ -66,6 +66,10 @@ LOFI_GREETING = "Hi. I'm your private, offline financial thinking partner. What'
 # documents only).
 LOFI_ONLINE_GREETING = "Hi. I'm your online financial thinking partner. Ask me about the tax code from the public documents, or practice a language with me."
 
+# First thing the bot says in a simple-chat session (chat only, no records
+# access) — it promises nothing it cannot do.
+LOFI_SIMPLE_CHAT_GREETING = "Hi. I'm your offline voice assistant, running right here on your machine. What would you like to talk about?"
+
 # Queued on the TTS service while a records lookup starts.
 LOFI_FILLER_PHRASE = "Let me check your records."
 
