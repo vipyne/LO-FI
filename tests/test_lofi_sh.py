@@ -423,3 +423,57 @@ def test_env_file_inline_comments_stripped(tmp_path):
     assert result.returncode == 0
     assert re.search(r"^\s+ANALYST\s+qwen3\.8:27b \(", result.stdout, re.M), result.stdout
     assert "# records analyst backend" not in result.stdout
+
+
+def test_start_reports_missing_models_and_launches_nothing(tmp_path):
+    port = closed_port()
+    # The Python side reads LOFI_OLLAMA_BASE_URL, not OLLAMA_HOST.
+    env = {
+        **isolated_store_env(tmp_path),
+        "LOFI_OLLAMA_BASE_URL": f"http://127.0.0.1:{port}/v1",
+        "LOFI_WEB_PORT": str(closed_port()),
+    }
+    result = run_lofi(
+        "start",
+        tmp_path / "state",
+        f"127.0.0.1:{port}",
+        extra_args=["--offline-only", "--cascade"],
+        **env,
+    )
+    out = result.stdout + result.stderr
+    assert result.returncode == 1, out
+    assert "not downloaded:" in out
+    assert "ollama:qwen2.5:7b" in out
+    assert "prefetch_models.py" in out
+    assert not (tmp_path / "state" / "bot.pid").exists()
+
+
+def test_start_online_only_missing_keys_fails_before_launch(tmp_path):
+    env = {
+        **isolated_store_env(tmp_path),
+        "OPENAI_API_KEY": "",
+        "DEEPGRAM_API_KEY": "",
+        "CARTESIA_API_KEY": "",
+        "LOFI_WEB_PORT": str(closed_port()),
+    }
+    result = run_lofi(
+        "start",
+        tmp_path / "state",
+        f"127.0.0.1:{closed_port()}",
+        extra_args=["--online-only"],
+        **env,
+    )
+    out = result.stdout + result.stderr
+    assert result.returncode == 1, out
+    assert "OPENAI_API_KEY" in out
+    assert "not downloaded" not in out
+    assert not (tmp_path / "state" / "bot.pid").exists()
+
+
+def test_usage_and_start_help_document_setup(tmp_path):
+    result = run_lofi("help", tmp_path, f"127.0.0.1:{closed_port()}")
+    assert result.returncode == 0
+    assert "./lofi.sh setup" in result.stdout
+    result = run_lofi("start", tmp_path, f"127.0.0.1:{closed_port()}", extra_args=["help"])
+    assert result.returncode == 0
+    assert 'setup needed: run "./lofi.sh setup"' in result.stdout
