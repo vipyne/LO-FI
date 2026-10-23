@@ -213,7 +213,7 @@ RECORDS HANDOFF: For ANY question about the user's transactions, spending, merch
 # Amended 2026-10-21 (hash dfd3f1d14e6572eb → 7a3607e7d8014d9f): general
 # stored-fact rule added after the live 2026-10-21 session invented passphrases
 # from round-1 transaction rows with zero retrieval calls
-# (.lofi/logs/bot-20261021-102346.log 10:26:17; ralph/HUMAN.md §2). Measured via
+# (.lofi/logs/bot-20261021-102346.log 10:26:17). Measured via
 # evals --stage analyst_followup (verbatim poisoned-context replay, qwen3:8b):
 # invented facts 0/15 repeats; retrieval fired 13/15 (pre-amendment 5/5 under the
 # compact pairing instruction, 1/5 under the stock one — Task 15's instruction
@@ -244,7 +244,7 @@ Your final answer is spoken out loud: one or two short sentences of plain speech
 # marked spoken (relayed as context-poisoning waiting lines), final answer
 # unmarked (63 s mute until the user spoke again). This wording states both
 # rules directly: working notes stay unmarked, the final answer always starts
-# with >>. Measured 2026-10-21 (ralph/probe_task15.py, qwen3:8b, production
+# with >>. Measured 2026-10-21 (spoken-mark probe script, qwen3:8b, production
 # request shape): final answer marked 8/8 fresh questions and 5/5 replays of
 # the live round-1 context, 0 marked narrations — stock scored the same on the
 # probe but demonstrably allowed the live inversion. The >> literal is

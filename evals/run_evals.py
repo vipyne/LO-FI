@@ -627,7 +627,7 @@ DELEGATE_SCHEMA = {
 # 2026-10-20 smoke-test session (.lofi/logs/bot-20261020-165925.log), which
 # also held a spoken waiting narration after each tool ack — those taught the
 # temp-0 front to answer records questions with waiting lines and no call
-# (ralph/HUMAN.md §2 note; baseline evals/results/followup-baseline.json:
+# (baseline evals/results/followup-baseline.json:
 # live misses 3/3). Task 12 keeps narrations out of the context
 # (pipeline.build_records_connector: respond_on_delegate off), so these
 # histories replay the post-fix shape.
@@ -822,8 +822,8 @@ TRANSCRIPT_REQUEST = (
 # transcript request, working narration, filter_rows error + retry, the three
 # Whole Foods rows and the final answer, then round 2's passphrase request.
 # Live, the analyst answered round 2 in 2 s with ZERO retrieval calls —
-# round 1's transaction rows in context looked like grounds (ralph/HUMAN.md §2
-# note 2026-10-21). The stage replays this context and demands retrieval.
+# round 1's transaction rows in context looked like grounds (noted 2026-10-21).
+# The stage replays this context and demands retrieval.
 ANALYST_POISONED_CONTEXT = [
     {
         "role": "user",

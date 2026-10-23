@@ -177,11 +177,11 @@ tail -f .lofi/logs/bot-*
 ---
 
 ## Learning Objectives:
-– A. learn how to evaluate a machine and what local models it can handle
-– B. gain an understanding of why local audio is difficult
-– C. create a basic offline voice AI chatbot
-– D. add RAG to said bot to access to custom data
-– E. learn how to take this local bot to the next level by going online
+* A. learn how to evaluate a machine and what local models it can handle
+* B. gain an understanding of why local audio is difficult
+* C. create a basic offline voice AI chatbot
+* D. add RAG to said bot to access to custom data
+* E. learn how to take this local bot to the next level by going online
 
 ### A. Choosing models for your hardware
 
