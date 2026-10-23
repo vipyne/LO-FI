@@ -48,6 +48,7 @@ from rag_agent import grounded_question, strip_think
 import services
 from services import (
     build_backend_llm,
+    build_cascade_llm,
     build_llm,
     build_online_backend_llm,
     build_online_llm,
@@ -64,11 +65,13 @@ from tunables import (
     DELEGATE_TOOL_DESCRIPTION,
     DELEGATE_TOOL_NAME,
     LOFI_FILLER_PHRASE,
+    LOFI_SIMPLE_CHAT_CONSOLE_HINT,
     QUESTION_PREFIX,
     SPLIT_FRONT_PROMPT,
     online_analyst_prompt,
     online_front_prompt,
     online_system_prompt,
+    simple_chat_prompt,
     system_prompt,
 )
 
@@ -116,8 +119,10 @@ def _index_ready(db_path) -> bool:
 
 def build_records_tools() -> list | None:
     """Cascade only: the four tools go straight on the conversation model."""
+    if config.architecture() != "cascade":
+        return None
     db_path = config.rag_db_path()
-    if config.architecture() == "llmwithbackend" or not _index_ready(db_path):
+    if not _index_ready(db_path):
         return None
     embedder = ingest.OllamaEmbedder(config.ollama_api_url(), config.embed_model())
     return tools.build_tools(db_path, embedder)
@@ -475,9 +480,19 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
     """
     if mode == ONLINE_MODE:
         return build_online_pipeline(transport)
-    records_tools = build_records_tools()
-    db_path = config.rag_db_path()
-    splitting = config.architecture() == "llmwithbackend" and _index_ready(db_path)
+    arch = config.architecture()
+    simple_chat = arch == "cascade-simple-chat"
+    if simple_chat:
+        # Chat only: no records db opened, no tools, no index check.
+        logger.info(LOFI_SIMPLE_CHAT_CONSOLE_HINT)
+        db_path = None
+        records_tools = None
+        splitting = False
+        prompt = simple_chat_prompt()
+    else:
+        records_tools = build_records_tools()
+        db_path = config.rag_db_path()
+        splitting = arch == "llmwithbackend" and _index_ready(db_path)
     if splitting:
         # Load the analyst's weights AND prefill its system messages now, in
         # the background, so the first delegation pays neither the cold load
@@ -492,7 +507,7 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
         )
         # The framework appends its own delegation guidance to this.
         prompt = SPLIT_FRONT_PROMPT
-    else:
+    elif not simple_chat:
         prompt = system_prompt(
             date_range=store.date_range(db_path) if records_tools else None,
             categories=store.categories(db_path) if records_tools else None,
@@ -504,9 +519,16 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
     )
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 
-    # Split front runs at temperature 0: delegation reliability on a 7B
-    # (measured 3/3 at 0, 2/3 at 0.7).
-    front = build_llm(temperature=0 if splitting else None)
+    if arch == "cascade":
+        front = build_cascade_llm()
+        # Load the cascade model's weights AND prefill the exact system prompt
+        # it will run with, in the background — same reason as the split's
+        # analyst warmup above (the first turn otherwise pays the prefill).
+        services.warm_analyst(system_messages=[{"role": "system", "content": prompt}])
+    else:
+        # Split front runs at temperature 0: delegation reliability on a 7B
+        # (measured 3/3 at 0, 2/3 at 0.7).
+        front = build_llm(temperature=0 if splitting else None)
     if splitting:
         from pipecat.pipeline.llm_with_backend import LLMWithBackend
 
@@ -519,10 +541,13 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
         llm = front
     tts = build_tts()
 
-    @front.event_handler("on_function_calls_started")
-    async def on_function_calls_started(service, function_calls):
-        await service.push_frame(RTVIServerMessageFrame(data={"type": BUSY_MESSAGE_TYPE}))
-        await tts.queue_frame(TTSSpeakFrame(LOFI_FILLER_PHRASE, append_to_context=False))
+    # Filler covers a tool call or a delegation; simple-chat makes neither.
+    if records_tools or splitting:
+
+        @front.event_handler("on_function_calls_started")
+        async def on_function_calls_started(service, function_calls):
+            await service.push_frame(RTVIServerMessageFrame(data={"type": BUSY_MESSAGE_TYPE}))
+            await tts.queue_frame(TTSSpeakFrame(LOFI_FILLER_PHRASE, append_to_context=False))
 
     pipeline = Pipeline(
         [

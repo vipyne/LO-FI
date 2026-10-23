@@ -8,6 +8,7 @@ Offline mode is the default, and anything that is not exactly "online" builds
 it — a garbage mode never silently ships data to the cloud.
 """
 
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -230,3 +231,68 @@ def test_online_rag_llm_model_default_and_override(monkeypatch):
     assert config.online_rag_llm_model() == "gpt-4o-mini"
     monkeypatch.setenv("LOFI_ONLINE_RAG_LLM_MODEL", "gpt-4.1")
     assert config.online_rag_llm_model() == "gpt-4.1"
+
+
+# --- offline architectures (LOFI_ARCHITECTURE: three-way branch) -------------
+
+
+@pytest.fixture
+def records_db(tmp_path, monkeypatch):
+    """A private records index built with FakeEmbedder, pointed at by config."""
+    data_dir = tmp_path / "records"
+    data_dir.mkdir()
+    shutil.copy(FIXTURES / "transactions-small.csv", data_dir / "transactions.csv")
+    shutil.copy(FIXTURES / "note.txt", data_dir / "note.txt")
+    db_path = tmp_path / "lofi.db"
+    ingest.ingest(data_dir, db_path, ingest.FakeEmbedder())
+    monkeypatch.setenv("LOFI_RAG_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("LOFI_RAG_DB", str(db_path))
+    return db_path
+
+
+@pytest.fixture
+def stub_offline_av(monkeypatch):
+    """Stub only STT/TTS/VAD: the LLM builders stay real for model assertions."""
+    for name in ("build_stt", "build_tts", "build_vad_processor"):
+        monkeypatch.setattr(pipeline, name, lambda *a, **kw: FrameProcessor())
+
+
+def test_simple_chat_has_no_tools_and_its_own_prompt(monkeypatch, stub_offline_services):
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    built = pipeline.build_pipeline(fake_transport())
+    assert tool_names(built.context) == []
+    prompt = built.context.messages[0]["content"]
+    assert prompt.startswith(tunables.LOFI_SIMPLE_CHAT_PROMPT)
+    assert "Today's date is" in prompt
+
+
+def test_simple_chat_never_opens_the_records_db(
+    monkeypatch, stub_offline_services, no_private_db
+):
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    built = pipeline.build_pipeline(fake_transport())  # no_private_db raises on any touch
+    assert built.pipeline is not None
+
+
+def test_cascade_holds_the_four_tools_on_the_rag_model(
+    records_db, stub_offline_av, monkeypatch
+):
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade")
+    monkeypatch.setenv("LOFI_RAG_LLM_MODEL", "qwen3.8:27b")
+    built = pipeline.build_pipeline(fake_transport())
+    assert set(tool_names(built.context)) == {
+        "lookup",
+        "filter_rows",
+        "aggregate",
+        "semantic_search",
+    }
+    assert built.llm._settings.model == "qwen3.8:27b"
+    assert built.context.messages[0]["content"].startswith(tunables.LOFI_OFFLINE_CASCADE_PROMPT)
+
+
+def test_cascade_without_index_builds_toolless(monkeypatch, stub_offline_services, tmp_path):
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade")
+    monkeypatch.setenv("LOFI_RAG_DB", str(tmp_path / "missing" / "lofi.db"))
+    built = pipeline.build_pipeline(fake_transport())
+    assert tool_names(built.context) == []
+    assert built.context.messages[0]["content"].startswith(tunables.LOFI_OFFLINE_CASCADE_PROMPT)

@@ -102,6 +102,13 @@ You are a helpful assistant in a voice conversation. Your responses will be spok
 You run entirely offline on the user's own computer — nothing they say leaves this machine. In this mode you have no access to their financial records, transactions, or saved documents, and no tool here reaches them. Asked about any of it — a transaction, an amount, a merchant, a date, a balance, a total, or something they saved in a note or a document — say exactly this and nothing more: I can't look that up in this mode — restart me in the full finances mode. Never invent a record, a number, a merchant, a date, or something they stored, and never offer to look one up.\
 """
 
+# Printed by `lofi.sh start` and logged at session build so the console says
+# which flag reaches the records. lofi.sh carries this copy verbatim too.
+LOFI_SIMPLE_CHAT_CONSOLE_HINT = (
+    "simple-chat: chat only, no records access — "
+    "finances need: ./lofi.sh start --offline-only --llmwithbackend"
+)
+
 # ===========================================================================
 # 3b. OFFLINE — FINANCES CASCADE (one model holds the four tools)
 # ===========================================================================

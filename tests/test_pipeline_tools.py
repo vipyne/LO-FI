@@ -113,7 +113,7 @@ class EventfulLLM(FrameProcessor):
 
 def test_filler_registered_on_function_calls_started(db, monkeypatch, stub_services):
     monkeypatch.setenv("LOFI_RAG_DB", str(db))
-    monkeypatch.setattr(pipeline, "build_llm", lambda *a, **kw: EventfulLLM())
+    monkeypatch.setattr(pipeline, "build_cascade_llm", lambda *a, **kw: EventfulLLM())
     built = pipeline.build_pipeline(fake_transport())
     assert built.llm._event_handlers["on_function_calls_started"].handlers
 
@@ -146,7 +146,7 @@ def test_filler_handler_pushes_busy_message_and_filler(db, monkeypatch, stub_ser
             self.queued.append(frame)
 
     monkeypatch.setenv("LOFI_RAG_DB", str(db))
-    monkeypatch.setattr(pipeline, "build_llm", lambda *a, **kw: RecordingLLM())
+    monkeypatch.setattr(pipeline, "build_cascade_llm", lambda *a, **kw: RecordingLLM())
     monkeypatch.setattr(pipeline, "build_tts", RecordingTTS)
     built = pipeline.build_pipeline(fake_transport())
     handler = built.llm._event_handlers["on_function_calls_started"].handlers[0]
@@ -369,7 +369,7 @@ def test_cascade_filler_is_spoken_but_kept_out_of_context(db, monkeypatch, stub_
     from pipecat.frames.frames import TTSSpeakFrame
 
     monkeypatch.setenv("LOFI_RAG_DB", str(db))
-    monkeypatch.setattr(pipeline, "build_llm", lambda *a, **kw: EventfulLLM())
+    monkeypatch.setattr(pipeline, "build_cascade_llm", lambda *a, **kw: EventfulLLM())
     monkeypatch.setattr(pipeline, "build_tts", RecordingTTSService)
     built = pipeline.build_pipeline(fake_transport())
     handler = built.llm._event_handlers["on_function_calls_started"].handlers[0]
@@ -712,11 +712,30 @@ def test_split_pipeline_warms_the_analyst(db, monkeypatch):
     assert system["content"].startswith(tunables.ANALYST_SYSTEM_PROMPT)
 
 
-def test_cascade_pipeline_does_not_warm_the_analyst(db, monkeypatch, stub_services):
+def test_cascade_pipeline_warms_its_own_model(db, monkeypatch, stub_services):
     monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade")
     monkeypatch.setenv("LOFI_RAG_DB", str(db))
-    calls: list[int] = []
-    monkeypatch.setattr(services, "warm_analyst", lambda: calls.append(1))
+    calls: list = []
+    monkeypatch.setattr(
+        services, "warm_analyst", lambda system_messages=None: calls.append(system_messages)
+    )
+
+    async def build():
+        return pipeline.build_pipeline(fake_transport())
+
+    built = asyncio.run(build())
+    # Warmup prefills the one system message the cascade runs with, verbatim.
+    assert len(calls) == 1
+    (system,) = calls[0]
+    assert system["content"] == built.context.messages[0]["content"]
+
+
+def test_simple_chat_pipeline_warms_nothing(monkeypatch, stub_services):
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    calls: list = []
+    monkeypatch.setattr(
+        services, "warm_analyst", lambda system_messages=None: calls.append(system_messages)
+    )
 
     async def build():
         pipeline.build_pipeline(fake_transport())
