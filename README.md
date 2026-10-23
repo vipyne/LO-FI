@@ -34,7 +34,7 @@ That version is an ideal language learning partner. Read on to learn more.
 
 ```bash
 git clone git@github.com:vipyne/LO-FI.git && cd LO-FI
-uv sync
+./lofi.sh setup
 bash scripts/run_ollama.sh
 uv run python scripts/prefetch_models.py
 ```
@@ -79,12 +79,17 @@ For more configuration and options:
 
 ## Setup
 
-### 1. Clone, install system deps, and sync the environment
+### 1. Clone and set up
 
 ```bash
 git clone git@github.com:vipyne/LO-FI.git && cd LO-FI
-uv sync
+./lofi.sh setup
 ```
+
+`setup` checks for uv and Ollama (and prints the install command when one is
+missing), copies `.lofirc` and `.env` from their examples, creates
+`data/private`, and runs `uv sync`. It is safe to rerun. If you skip it,
+`./lofi.sh start` notices and prints `setup needed: run "./lofi.sh setup"`.
 
 Starting from a bare Linux box or a fresh Windows WSL2 (Ubuntu) shell — no
 git, no uv, no Ollama yet? This is the whole setup:
@@ -98,16 +103,12 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 # code
 git clone https://github.com/vipyne/LO-FI.git && cd LO-FI
-uv sync
+./lofi.sh setup
 ```
 
 > [!IMPORTANT]
 > On WSL2, clone into the Linux filesystem — `~/`, not `/mnt/c/…`.
 > Want more Windows specific instructions? See [Running on Windows](#running-on-windows)
-
-```bash
-cp lofirc.example .lofirc
-```
 
 ### 2. Fetch the models (the one-time online step)
 
