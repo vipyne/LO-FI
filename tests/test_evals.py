@@ -203,8 +203,8 @@ SEARCH_CALL_MSG = {
     ]
 }
 
-# Verbatim from .lofi/logs/bot-20261021-102346.log 10:26:17 — zero retrieval
-# calls, passphrases invented outright.
+# Verbatim from a live session — zero retrieval calls, passphrases invented
+# outright.
 LIVE_HALLUCINATED_REPLY = (
     'According to your records, the passphrases you stored are: \n\n'
     'Whole Foods Store 1: "Passphrase123"  \n'

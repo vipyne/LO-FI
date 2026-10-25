@@ -200,10 +200,9 @@ def build_records_connector():
         # Ollama has no developer role, so backend notes reach the front as
         # USER messages — the stock per-message RELAY_NOTE then reads as a
         # standing user demand, and the 7B front re-relays the old result on
-        # every later turn instead of delegating the new question (measured,
-        # 2026-10-19 stuck session: stock note never delegates the follow-up;
-        # bare "Backend:" message delegates; arrival-turn relay unaffected —
-        # the compact pairing instruction already says to relay results once).
+        # every later turn instead of delegating the new question. A bare
+        # "Backend:" prefix delegates; the compact pairing instruction
+        # already says to relay results once.
         def render_output(self, output):
             message = super().render_output(output)
             if message is not None and output.prefers_spoken and not output.is_thought:
@@ -212,22 +211,19 @@ def build_records_connector():
 
         # Analyst sometimes omits the spoken mark on its final answer; the
         # note then lands with run_llm=False and nothing runs the front — the
-        # bot sits mute on a finished answer until the user speaks (measured
-        # 2026-10-21 log: answer delivered silent 13s after the question,
-        # spoken only after "You still there?" 63s later). When a lull ends
-        # with appended output and no front run, nudge one: an empty append
-        # with run_llm=True runs the front on the context it already holds,
-        # waits out in-flight speech, and persists no message.
+        # bot sits mute on a finished answer until the user speaks. When a
+        # lull ends with appended output and no front run, nudge one: an
+        # empty append with run_llm=True runs the front on the context it
+        # already holds, waits out in-flight speech, and persists no message.
         #
         # Every front run triggered here also signals lofi-relay: the
         # watchdog's deadline armed at delegation restarts fresh for the
-        # relay run (measured 2026-10-22 12:56 log: 30s deadline fired 2.5s
-        # after the answer arrived, speaking "I'm still working on it."
-        # ahead of the answer).
+        # relay run, else it fires mid-relay and speaks a waiting line
+        # after the answer already arrived.
         async def deliver(self, frontend, event):
             # Analyst's spoken answer goes straight to TTS: the stock path
-            # re-runs the front to re-verbalize it (measured 2026-10-22:
-            # 4.6s answer-to-speech) and rewords away the source file. The
+            # re-runs the front to re-verbalize it (4.6s answer-to-speech)
+            # and rewords away the source file. The
             # note still lands in context with run_llm=False, so follow-up
             # delegation reads a complete transcript and no front run can
             # fabricate. The worker's transform_output already stripped
@@ -271,13 +267,12 @@ def build_records_connector():
     return RecordsBackendConnector(
         frontend_pairing_instruction=LOFI_FRONTEND_PAIRING_INSTRUCTION,
         # Post-delegate re-run narrates the handoff — or worse: the temp-0 7B
-        # sometimes ANSWERS on that run (measured 2026-10-22 live: spoke an
-        # invented passphrase "sunflower42" before the analyst even started),
-        # and narrations accumulate in context as complete-looking answers the
-        # front then imitates without the tool call (measured 2026-10-20,
-        # evals --stage followup: live misses 3/3 with narrations, 1/3
-        # without). Off: the canned filler in build_pipeline speaks instead.
-        # The online split keeps the spoken ack — its frontier front is safe.
+        # sometimes ANSWERS on that run with an invented passphrase, and
+        # narrations accumulate in context as complete-looking answers the
+        # front then imitates without the tool call (verify with
+        # evals --stage followup). Off: the canned filler in build_pipeline
+        # speaks instead. The online split keeps the spoken ack — its
+        # frontier front is safe.
         respond_on_delegate=False,
     )
 
@@ -496,7 +491,7 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
     if splitting:
         # Load the analyst's weights AND prefill its system messages now, in
         # the background, so the first delegation pays neither the cold load
-        # nor the system-prompt prefill (measured 2026-10-22: 25s TTFB).
+        # nor the system-prompt prefill (25s TTFB).
         # Message order mirrors the live request: pairing instruction first
         # (service system instruction), then the context's system message.
         services.warm_analyst(

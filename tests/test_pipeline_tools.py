@@ -400,14 +400,14 @@ def test_split_speaks_canned_filler_out_of_context(db, monkeypatch):
     fillers = [f for f in built.tts.queued if isinstance(f, TTSSpeakFrame)]
     assert [f.text for f in fillers] == [pipeline.LOFI_FILLER_PHRASE]
     # Waiting lines in the context teach the temp-0 front to answer records
-    # questions with waiting lines and no tool call (measured 2026-10-20).
+    # questions with waiting lines and no tool call.
     assert fillers[0].append_to_context is False
 
 
 def test_split_connector_does_not_rerun_front_on_delegate():
     # The post-delegate re-run narrates — or ANSWERS: the temp-0 7B spoke an
-    # invented passphrase on that run (measured live 2026-10-22). Off: the
-    # canned filler speaks instead; the online split keeps the spoken ack.
+    # invented passphrase on that run. Off: the canned filler speaks instead;
+    # the online split keeps the spoken ack.
     connector = pipeline.build_records_connector()
     assert connector._respond_on_delegate is False
 
@@ -435,8 +435,7 @@ def _nudges(frontend):
 def test_unmarked_final_answer_still_runs_the_front():
     # Analyst sometimes omits the spoken mark on its final answer; the note
     # lands with run_llm=False and the bot sits mute on a finished answer
-    # (measured 2026-10-21 log: answer delivered silent 13s after the
-    # question, spoken only after "You still there?" 63s later).
+    # until the user speaks again.
     from pipecat.frames.frames import LLMMessagesAppendFrame
     from pipecat.workers.llm.backend_llm_worker import BackendIdle, BackendOutput
 
@@ -469,8 +468,8 @@ def test_spoken_final_answer_gets_no_nudge():
 
 
 def test_spoken_final_answer_goes_straight_to_tts():
-    # The analyst's spoken answer skips the front relay (measured 2026-10-22:
-    # 4.6s answer-to-speech): TTSSpeakFrame to TTS, note appended with
+    # The analyst's spoken answer skips the front relay (4.6s
+    # answer-to-speech): TTSSpeakFrame to TTS, note appended with
     # run_llm=False so follow-ups still read a complete transcript.
     from pipecat.frames.frames import LLMMessagesAppendFrame, TTSSpeakFrame
     from pipecat.workers.llm.backend_llm_worker import BackendIdle, BackendOutput
@@ -533,8 +532,8 @@ def _relay_signals(frontend):
 def test_every_delivery_front_run_signals_relay():
     # Each front run triggered by a delivery (spoken answer, error, idle
     # nudge) restarts the watchdog timer: the deadline armed at delegation
-    # otherwise fires mid-relay (measured 2026-10-22 12:56 log: "I'm still
-    # working on it." spoken 2.5s after the answer arrived, ahead of it).
+    # otherwise fires mid-relay, speaking a waiting line after the answer
+    # already arrived.
     from pipecat.workers.llm.backend_llm_worker import BackendError, BackendIdle, BackendOutput
 
     connector = pipeline.build_records_connector()

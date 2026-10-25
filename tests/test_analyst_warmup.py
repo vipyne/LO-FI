@@ -1,6 +1,6 @@
 """Tests for the analyst warmup: a load-only generate fired at pipeline build so
-the first delegation doesn't pay the analyst's cold load (measured 11.5 s TTFB,
-qwen3:8b, 2026-10-20). Backgrounded — startup never waits for it."""
+the first delegation doesn't pay the analyst's cold load (11.5 s TTFB,
+qwen3:8b). Backgrounded — startup never waits for it."""
 
 import asyncio
 

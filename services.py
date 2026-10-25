@@ -65,8 +65,8 @@ def _stt_model_arg(configured: str) -> str:
     """The model value handed to the STT service: the local snapshot path when
     any cache holds the weights, else the configured name. A path loads
     straight from disk; a repo id makes the backend call snapshot_download,
-    whose hub check stalls the first utterance ~78s with no network (measured
-    2026-10-22). Both whisper backends accept a local directory
+    whose hub check stalls the first utterance ~78s with no network. Both
+    whisper backends accept a local directory
     (mlx_whisper path_or_hf_repo / faster_whisper model_size_or_path).
     """
     repo_id = stt_repo_id()
@@ -235,8 +235,8 @@ def build_backend_llm():
     )
 
 
-# Analyst cold load measured 2026-10-20 (qwen3:8b): 11.5 s TTFB on the first
-# delegation, on top of 45 s thinking — the user hears a long silence.
+# Analyst cold load (qwen3:8b): 11.5 s TTFB on the first delegation, on top
+# of thinking time — the user hears a long silence.
 WARMUP_TIMEOUT_SECS = 120.0
 
 _warmups: set[asyncio.Task] = set()
@@ -245,8 +245,8 @@ _warmups: set[asyncio.Task] = set()
 async def warm_analyst_model(system_messages=None, client=None) -> None:
     """Load the analyst's weights into Ollama — and, given its system
     messages, prefill them so the KV prefix cache is warm before the first
-    delegation (measured 2026-10-22: 25s first-delegation TTFB = prefill of
-    the composed system prompt). Without messages: empty /api/generate =
+    delegation (25s first-delegation TTFB = prefill of the composed system
+    prompt). Without messages: empty /api/generate =
     load, no tokens.
 
     Errors are swallowed: a warmup that fails costs the cold load back, and

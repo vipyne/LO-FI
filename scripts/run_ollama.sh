@@ -56,8 +56,8 @@ export OLLAMA_CONTEXT_LENGTH="${OLLAMA_CONTEXT_LENGTH:-16384}"
 export OLLAMA_MAX_LOADED_MODELS="${OLLAMA_MAX_LOADED_MODELS:-3}"
 # One user, one KV cache per model: parallel slots each hold a separate cache,
 # so a new delegation lands on a cold slot and re-prefills the whole analyst
-# prompt (measured 2026-10-22: 43-47s TTFB between delegations vs 1.7s within
-# one). Parallel=1 keeps every request on the single warm slot.
+# prompt (43-47s TTFB between delegations vs 1.7s within one). Parallel=1
+# keeps every request on the single warm slot.
 export OLLAMA_NUM_PARALLEL="${OLLAMA_NUM_PARALLEL:-1}"
 
 mkdir -p "${OLLAMA_MODELS}"

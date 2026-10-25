@@ -145,12 +145,10 @@ This is a spoken conversation, so talk like a person. Answer in one or two short
 
 # Front prompt for the LLMWithBackend split: personality + what the analyst is
 # for, in plain words. The connector appends the compact pairing instruction.
-# Measured prompt landmines on small fronts — do not reintroduce:
-#   - "Never write a tool name as text" clauses: nemotron parrots the negation.
-#   - Worked call examples in the pairing: parroted as text instead of called.
-#   - The word "Backend" anywhere in instructions: nemotron textualizes the
-#     protocol; qwen starts ADDRESSING "Backend" in prose. Relay behavior comes
-#     from the framework's per-message relay note, not from naming the marker.
+# Measured landmines on small fronts — do not reintroduce: "never write a
+# tool name as text" clauses, worked call examples, the word "Backend" (each
+# breaks qwen2.5:7b or nemotron into parroting/narrating instead of calling).
+# Relay behavior comes from the framework's per-message relay note.
 SPLIT_FRONT_PROMPT = """\
 You are a private financial thinking partner. You run entirely offline on the user's own computer — nothing they say leaves this machine, and that privacy is exactly why they can think out loud with you about money.
 
@@ -168,32 +166,22 @@ This is a spoken conversation, so talk like a person. Keep each turn short and c
 DELEGATE_TOOL_NAME = "ask_financial_records"
 
 
-# Domain-worded tool description (same lever as the domain name: measured on
-# qwen2.5:7b, the stock "hand the conversation to the backend" description
-# loses to the model's credential-refusal reflex on passphrase questions —
-# this wording delegates them, incl. the saved-passphrase smoke doc, with
-# records/chitchat behavior unchanged). The arithmetic sentence routes "what's
-# that total?" follow-ups to the analyst's aggregate SQL — without it the 7B
-# adds the amounts itself and miscarries digits (measured 2026-10-19: $301.81
-# spoken as "three hundred and61.81"). Keeps the transcript strategy's
-# semantics: one call per reply, no arguments, new request → new call.
+# Domain-worded tool description (same lever as the domain name: on
+# qwen2.5:7b the stock "hand the conversation to the backend" wording loses
+# passphrase questions to the model's credential-refusal reflex). The
+# arithmetic sentence routes "what's that total?" follow-ups to the analyst's
+# aggregate SQL — without it the 7B adds amounts itself and miscarries digits.
+# Semantics: one call per reply, no arguments, new request → new call.
 DELEGATE_TOOL_DESCRIPTION = """\
 Look up anything in the user's own financial records and saved documents: transactions, spending, income, accounts, merchants, amounts, dates, totals, balances, and anything they saved in documents or notes, including a passphrase or code they stored there. All arithmetic is its job too: a total, sum, difference, or average, even over amounts already said in this conversation. Call this as soon as any part of what the user asks needs it, and do the rest yourself. One call per reply, however many things the user asked for. It takes no arguments: the analyst reads the conversation itself. A request the user makes after your last call needs a call of its own, and so does anything the user says about work already handed over. Keep talking with the user while it works.\
 """
 
 
 # Pairing instruction sized for small local fronts (the stock one is written
-# for frontier models and drowns them — measured on qwen2.5:7b AND
-# nemotron-3-nano:4b: both stop tool-calling and narrate instead). Landmines
-# this wording deliberately avoids (see SPLIT_FRONT_PROMPT above): worked
-# call examples, "never write X as text" clauses, and the word "Backend" —
-# each measured to break one small model or the other. Relay reliability comes
-# from the framework's per-message relay note.
-# Last two sentences (measured 2026-10-20, evals --stage followup): after
-# completed delegation rounds the 7B clarifies or refuses vague/relative-date/
-# bare-id/passphrase questions — this wording routes them to the tool
-# (deep recall 0.783 → 0.913, first-turn split recall 0.609 → 0.870,
-# chitchat precision 1.0 throughout).
+# for frontier models and drowns qwen2.5:7b and nemotron-3-nano:4b — both stop
+# tool-calling and narrate). Avoids the SPLIT_FRONT_PROMPT landmines above.
+# Last two sentences route post-delegation follow-ups (vague, relative-date,
+# bare-id, passphrase) to the tool; verify changes with evals --stage followup.
 
 # Overrides Pipecat's stock FRONTEND_PAIRING_INSTRUCTION
 LOFI_FRONTEND_PAIRING_INSTRUCTION = f"""\
@@ -210,16 +198,8 @@ RECORDS HANDOFF: For ANY question about the user's transactions, spending, merch
 # (rag_agent.grounded_question), keeping this prompt byte-stable for the
 # KV-prefix cache.
 #
-# Amended 2026-10-21 (hash dfd3f1d14e6572eb → 7a3607e7d8014d9f): general
-# stored-fact rule added after the live 2026-10-21 session invented passphrases
-# from round-1 transaction rows with zero retrieval calls
-# (.lofi/logs/bot-20261021-102346.log 10:26:17). Measured via
-# evals --stage analyst_followup (verbatim poisoned-context replay, qwen3:8b):
-# invented facts 0/15 repeats; retrieval fired 13/15 (pre-amendment 5/5 under the
-# compact pairing instruction, 1/5 under the stock one — Task 15's instruction
-# carries most of the retrieval fix; this rule is the prompt-level belt under
-# it). The 2/15 misses answered ">> I'll search..." without calling — a
-# stochastic announce-without-call tail, not invention.
+# Stored-fact rule stops qwen3:8b inventing passphrases from earlier tool
+# rounds without retrieving; verify changes with evals --stage analyst_followup.
 ANALYST_SYSTEM_PROMPT = """\
 You are a records analyst for a private, offline finance assistant. You answer questions about the user's own transactions and saved documents by calling the retrieval tools you have been given.
 
@@ -238,17 +218,11 @@ Your final answer is spoken out loud: one or two short sentences of plain speech
 
 
 # Compact pairing instruction for the analyst's BackendLLMWorker, replacing
-# pipecat's stock BACKEND_PAIRING_INSTRUCTION (written for frontier models).
-# Live 2026-10-21 session (.lofi/logs/bot-20261021-102346.log) showed qwen3:8b
-# inverting the >> spoken mark under the stock wording: working narration
-# marked spoken (relayed as context-poisoning waiting lines), final answer
-# unmarked (63 s mute until the user spoke again). This wording states both
-# rules directly: working notes stay unmarked, the final answer always starts
-# with >>. Measured 2026-10-21 (spoken-mark probe script, qwen3:8b, production
-# request shape): final answer marked 8/8 fresh questions and 5/5 replays of
-# the live round-1 context, 0 marked narrations — stock scored the same on the
-# probe but demonstrably allowed the live inversion. The >> literal is
-# pipecat's backend_llm_worker.SPOKEN_MARK — keep them in sync.
+# pipecat's stock BACKEND_PAIRING_INSTRUCTION (under the stock wording
+# qwen3:8b inverts the >> spoken mark: narration marked, final answer
+# unmarked). States both rules directly: working notes unmarked, final answer
+# starts with >>. The >> literal is pipecat's backend_llm_worker.SPOKEN_MARK —
+# keep them in sync.
 
 # Overrides Pipecat's stock BACKEND_PAIRING_INSTRUCTION
 LOFI_BACKEND_PAIRING_INSTRUCTION = """\

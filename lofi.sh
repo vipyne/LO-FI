@@ -9,11 +9,11 @@
 #   ./lofi.sh setup                       # one-time setup: deps checked, .lofirc/.env seeded, uv sync
 #   ./lofi.sh start [-t browser|headphones] [--online-only|--offline-only] [--cascade|--llmwithbackend]
 #                                         # bring up Ollama if needed, then the bot (default: browser)
-#                                         # checks prerequisites first and points at the fix
 #                                         # --online-only: cloud-only sessions, no Ollama, no local models
 #                                         # --offline-only: local sessions only; an online connect is refused
-#                                         # --cascade: simple STT, LLM, TTS bot architecture
+#                                         # --cascade: STT, LLM, TTS bot architecture; has tool calls
 #                                         # --llmwithbackend: front LLM/analyst LLM bot architecture
+#                                         # --cascade-simple-chat; STT, LLM, TTS bot architecture; no tool calls
 #   ./lofi.sh stop                        # stop only what lofi started (recorded PIDs)
 #   ./lofi.sh status [-v]                 # machine, ownership, bot, models (configured + downloaded), rag; -v adds full catalogs
 #   ./lofi.sh index-rag                   # build/rebuild both document indexes

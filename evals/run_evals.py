@@ -623,14 +623,12 @@ DELEGATE_SCHEMA = {
 # ---- stage: followup (delegation after a completed delegation round) -----------
 
 # Production context shape after one completed delegation: delegate tool call
-# → tool ack → developer Backend notes → spoken relay. Captured from the
-# 2026-10-20 smoke-test session (.lofi/logs/bot-20261020-165925.log), which
-# also held a spoken waiting narration after each tool ack — those taught the
-# temp-0 front to answer records questions with waiting lines and no call
-# (baseline evals/results/followup-baseline.json:
-# live misses 3/3). Task 12 keeps narrations out of the context
+# → tool ack → developer Backend notes → spoken relay. Captured from a live
+# smoke-test session, which also held a spoken waiting narration after each
+# tool ack — those taught the temp-0 front to answer records questions with
+# waiting lines and no call. Narrations stay out of the context now
 # (pipeline.build_records_connector: respond_on_delegate off), so these
-# histories replay the post-fix shape.
+# histories replay that shape.
 FOLLOWUP_HISTORY = [
     {"role": "assistant", "content": tunables.LOFI_GREETING},
     {
@@ -668,8 +666,7 @@ FOLLOWUP_HISTORY = [
 
 # Second completed round + chitchat exchange, continuing the same session. One
 # round barely moves delegation; this depth is where the live session missed
-# (temperature 0, qwen2.5:7b, 2026-10-20 — with narrations 0.957/0.826/0 of 3,
-# post-fix shape + amended pairing 0.957/0.913/2 of 3).
+# (temperature 0, qwen2.5:7b).
 FOLLOWUP_HISTORY_DEEP = FOLLOWUP_HISTORY + [
     {"role": "user", "content": "Um,   Yeah.   What's the total of the transactions?"},
     {
@@ -817,13 +814,12 @@ TRANSCRIPT_REQUEST = (
     "assistant already has."
 )
 
-# The analyst's own context at the moment it invented passphrases, verbatim from
-# the 2026-10-21 live session (.lofi/logs/bot-20261021-102346.log): round 1's
-# transcript request, working narration, filter_rows error + retry, the three
-# Whole Foods rows and the final answer, then round 2's passphrase request.
-# Live, the analyst answered round 2 in 2 s with ZERO retrieval calls —
-# round 1's transaction rows in context looked like grounds (noted 2026-10-21).
-# The stage replays this context and demands retrieval.
+# The analyst's own context at the moment it invented passphrases, verbatim
+# from a live session: round 1's transcript request, working narration,
+# filter_rows error + retry, the three Whole Foods rows and the final answer,
+# then round 2's passphrase request. Live, the analyst answered round 2 with
+# ZERO retrieval calls — round 1's transaction rows in context looked like
+# grounds. The stage replays this context and demands retrieval.
 ANALYST_POISONED_CONTEXT = [
     {
         "role": "user",
