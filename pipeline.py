@@ -65,7 +65,6 @@ from tunables import (
     DELEGATE_TOOL_DESCRIPTION,
     DELEGATE_TOOL_NAME,
     LOFI_FILLER_PHRASE,
-    LOFI_SIMPLE_CHAT_CONSOLE_HINT,
     QUESTION_PREFIX,
     SPLIT_FRONT_PROMPT,
     online_analyst_prompt,
@@ -478,8 +477,6 @@ def build_pipeline(transport: BaseTransport, mode: str = OFFLINE_MODE) -> BuiltB
     arch = config.architecture()
     simple_chat = arch == "cascade-simple-chat"
     if simple_chat:
-        # Chat only: no records db opened, no tools, no index check.
-        logger.info(LOFI_SIMPLE_CHAT_CONSOLE_HINT)
         db_path = None
         records_tools = None
         splitting = False

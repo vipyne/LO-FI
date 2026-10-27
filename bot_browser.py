@@ -322,7 +322,7 @@ def _transport_kind(runner_args) -> str:
 
 def _greeting(mode: str) -> str:
     """Opening line for the session's mode."""
-    return config.online_greeting() if mode == ONLINE_MODE else config.greeting()
+    return config.online_greeting() if mode == ONLINE_MODE else config.offline_greeting()
 
 
 def _register_webrtc_handlers(transport, worker, mode: str = OFFLINE_MODE) -> None:

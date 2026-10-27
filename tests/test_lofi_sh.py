@@ -477,3 +477,40 @@ def test_usage_and_start_help_document_setup(tmp_path):
     result = run_lofi("start", tmp_path, f"127.0.0.1:{closed_port()}", extra_args=["help"])
     assert result.returncode == 0
     assert 'setup needed: run "./lofi.sh setup"' in result.stdout
+
+
+def test_per_command_help_start_documents_simple_chat(tmp_path):
+    result = run_lofi("start", tmp_path, f"127.0.0.1:{closed_port()}", extra_args=["help"])
+    assert result.returncode == 0
+    assert "--cascade-simple-chat" in result.stdout
+
+
+def test_start_simple_chat_conflicts_with_other_architecture_flags(tmp_path):
+    for other in ("--cascade", "--llmwithbackend"):
+        result = run_lofi(
+            "start",
+            tmp_path,
+            f"127.0.0.1:{closed_port()}",
+            extra_args=["--cascade-simple-chat", other],
+        )
+        assert result.returncode == 1
+        assert "--cascade-simple-chat" in result.stderr and other in result.stderr
+
+
+def test_start_simple_chat_overrides_online_only(tmp_path):
+    # Decoy bot.pid stops start at the already-running guard, after the
+    # override warning prints but before anything launches.
+    decoy = subprocess.Popen(["sleep", "300"])
+    try:
+        (tmp_path / "bot.pid").write_text(str(decoy.pid))
+        result = run_lofi(
+            "start",
+            tmp_path,
+            f"127.0.0.1:{closed_port()}",
+            extra_args=["--cascade-simple-chat", "--online-only"],
+        )
+        assert result.returncode == 1
+        assert "already running" in result.stderr
+        assert "start: simple-chat is offline — overriding online-only." in result.stdout
+    finally:
+        decoy.kill()

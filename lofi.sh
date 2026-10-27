@@ -7,13 +7,13 @@
 #
 # Usage:
 #   ./lofi.sh setup                       # one-time setup: deps checked, .lofirc/.env seeded, uv sync
-#   ./lofi.sh start [-t browser|headphones] [--online-only|--offline-only] [--cascade|--llmwithbackend]
+#   ./lofi.sh start [-t browser|headphones] [--online-only|--offline-only] [--cascade|--llmwithbackend|--cascade-simple-chat]
 #                                         # bring up Ollama if needed, then the bot (default: browser)
 #                                         # --online-only: cloud-only sessions, no Ollama, no local models
 #                                         # --offline-only: local sessions only; an online connect is refused
 #                                         # --cascade: STT, LLM, TTS bot architecture; has tool calls
 #                                         # --llmwithbackend: front LLM/analyst LLM bot architecture
-#                                         # --cascade-simple-chat; STT, LLM, TTS bot architecture; no tool calls
+#                                         # --cascade-simple-chat: STT, LLM, TTS bot architecture; no tool calls
 #   ./lofi.sh stop                        # stop only what lofi started (recorded PIDs)
 #   ./lofi.sh status [-v]                 # machine, ownership, bot, models (configured + downloaded), rag; -v adds full catalogs
 #   ./lofi.sh index-rag                   # build/rebuild both document indexes
@@ -206,7 +206,7 @@ preflight_gate() {
 }
 
 cmd_start() {
-  local transport="browser" online_flag=0 offline_flag=0 cascade_flag=0 llmwb_flag=0
+  local transport="browser" online_flag=0 offline_flag=0 cascade_flag=0 llmwb_flag=0 simple_chat_flag=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -t|--transport)   transport="${2:-}"; shift 2 || shift ;;
@@ -214,6 +214,7 @@ cmd_start() {
       --offline-only)   offline_flag=1; shift ;;
       --cascade)        cascade_flag=1; shift ;;
       --llmwithbackend) llmwb_flag=1; shift ;;
+      --cascade-simple-chat) simple_chat_flag=1; shift ;;
       -h|--help)        usage; exit 0 ;;
       *) echo "lofi: unknown start option '$1' (try ./lofi.sh -h)" >&2; exit 1 ;;
     esac
@@ -224,14 +225,28 @@ cmd_start() {
   if (( cascade_flag && llmwb_flag )); then
     echo "lofi: --cascade and --llmwithbackend conflict — pick one" >&2; exit 1
   fi
+  if (( simple_chat_flag && cascade_flag )); then
+    echo "lofi: --cascade-simple-chat and --cascade conflict — pick one" >&2; exit 1
+  fi
+  if (( simple_chat_flag && llmwb_flag )); then
+    echo "lofi: --cascade-simple-chat and --llmwithbackend conflict — pick one" >&2; exit 1
+  fi
   # Flags override the config files; zero the opposite mode var so the
   # offline-wins conflict rule can't flip a flag's choice.
   (( online_flag ))  && export LOFI_ONLINE_ONLY=1 LOFI_OFFLINE_ONLY=0
   (( offline_flag )) && export LOFI_OFFLINE_ONLY=1 LOFI_ONLINE_ONLY=0
   # Arch flags steer both session kinds: LOFI_ARCHITECTURE (offline) and
   # LOFI_ONLINE_ARCHITECTURE (online) each default to llmwithbackend.
+  # simple-chat is offline-only, so it leaves LOFI_ONLINE_ARCHITECTURE alone.
   (( cascade_flag )) && export LOFI_ARCHITECTURE=cascade LOFI_ONLINE_ARCHITECTURE=cascade
   (( llmwb_flag ))   && export LOFI_ARCHITECTURE=llmwithbackend LOFI_ONLINE_ARCHITECTURE=llmwithbackend
+  (( simple_chat_flag )) && export LOFI_ARCHITECTURE=cascade-simple-chat
+  if [[ "${LOFI_ARCHITECTURE:-llmwithbackend}" == "cascade-simple-chat" ]]; then
+    if truthy "${LOFI_ONLINE_ONLY:-}"; then
+      export LOFI_ONLINE_ONLY=0
+      echo "start: simple-chat is offline — overriding online-only."
+    fi
+  fi
 
   local mode
   mode="$(serve_mode)"
@@ -433,7 +448,7 @@ cmd_help() {
       echo "  runs uv sync; safe to rerun"
       echo "  models are the separate online step: uv run python scripts/prefetch_models.py" ;;
     start)
-      echo "usage: ./lofi.sh start [-t browser|headphones] [--online-only|--offline-only] [--cascade|--llmwithbackend]"
+      echo "usage: ./lofi.sh start [-t browser|headphones] [--online-only|--offline-only] [--cascade|--llmwithbackend|--cascade-simple-chat]"
       echo "  -t, --transport   browser (the default — serves websocket for offline"
       echo "                    sessions and SmallWebRTC for online sessions)"
       echo "                    headphones (local mic/speakers via PyAudio — wear headphones)"
@@ -444,6 +459,8 @@ cmd_help() {
       echo "  --cascade         STT, LLM, TTS (LOFI_ARCHITECTURE / LOFI_ONLINE_ARCHITECTURE=cascade)"
       echo "  --llmwithbackend  front model + analyst backend, default"
       echo "                    (LOFI_ARCHITECTURE / LOFI_ONLINE_ARCHITECTURE=llmwithbackend)"
+      echo "  --cascade-simple-chat  STT, LLM, TTS with no tools — chat only, offline only"
+      echo "                    (LOFI_ARCHITECTURE=cascade-simple-chat; overrides online-only)"
       echo "  flags win over .lofirc; both vars set means offline-only wins"
       echo "  checks prerequisites first: a fresh clone gets 'setup needed: run \"./lofi.sh setup\"',"
       echo "  missing models/extras/indexes get the exact command to run"

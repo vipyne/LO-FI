@@ -95,7 +95,7 @@ async def _speak_greeting(worker: PipelineWorker) -> None:
     stream to come up, then queue a `TTSSpeakFrame`.
     """
     await asyncio.sleep(config.greeting_delay_secs())
-    await worker.queue_frames([TTSSpeakFrame(config.greeting())])
+    await worker.queue_frames([TTSSpeakFrame(config.offline_greeting())])
 
 
 def _configure_logging() -> None:

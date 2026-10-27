@@ -40,6 +40,15 @@ def test_greeting_for_mode(monkeypatch):
     assert bot_browser._greeting("garbage") == config.greeting()
 
 
+def test_greeting_for_mode_simple_chat(monkeypatch):
+    """Simple-chat sessions open with the chat-only line, not the finances one."""
+    monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
+    monkeypatch.delenv("LOFI_GREETING", raising=False)
+    monkeypatch.delenv("LOFI_SIMPLE_CHAT_GREETING", raising=False)
+
+    assert bot_browser._greeting(OFFLINE_MODE) == config.simple_chat_greeting()
+
+
 def test_simple_chat_greeting_selected_by_architecture(monkeypatch):
     """Simple-chat's greeting wins even when LOFI_GREETING is set."""
     monkeypatch.setenv("LOFI_ARCHITECTURE", "cascade-simple-chat")
