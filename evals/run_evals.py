@@ -1174,19 +1174,6 @@ def print_report(retrieval_report=None, toolcall_report=None, e2e_report=None, i
                 for r in e2e_report["rows"]
             ],
         )
-    if split_report is not None:
-        _print_table(
-            "Split architecture (front reasoning-off / records agent reasoning-on)",
-            [
-                ("delegation_recall", split_report["delegation_recall"]),
-                ("delegation_precision", split_report["delegation_precision"]),
-                ("fragmented_recall", split_report["fragmented_recall"]),
-                ("front_ms_avg", split_report["front_ms_avg"]),
-                ("back_answer_accuracy", split_report["back_answer_accuracy"]),
-                ("back_ms_mean", split_report["back_ms_mean"]),
-                ("back_ms_max", split_report["back_ms_max"]),
-            ],
-        )
     if isolate_report is not None:
         _print_table(
             "Isolate (gold rows pasted in as the tool result)",
@@ -1238,7 +1225,7 @@ async def _amain(args) -> None:
         PINNED_TODAY, store.date_range(db_path), store.categories(db_path)
     )
 
-    retrieval_report = toolcall_report = e2e_report = isolate_report = split_report = front_report = followup_report = analyst_followup_report = None
+    retrieval_report = toolcall_report = e2e_report = isolate_report = front_report = followup_report = analyst_followup_report = None
     run_all = args.stage == "all"
 
     if run_all or args.stage == "retrieval":
